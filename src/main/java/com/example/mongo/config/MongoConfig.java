@@ -6,6 +6,8 @@ import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
@@ -19,6 +21,10 @@ import java.util.Map;
 public class MongoConfig {
 
     private Map<String, MongoTemplate> mongoTemplateMap = new HashMap<>();
+
+    @Autowired
+    @Qualifier(value = "mongoTemplateMap")
+    private Map<String, MongoTemplate>  mongoTemplates;
 
     @Value( "${mongo.client.uri}" )
     private String mongoClientUri;
@@ -51,5 +57,23 @@ public class MongoConfig {
             return null;
 
         }
+    }
+
+    public static MongoTemplate createMongoTemplate(String database,String url){
+        final ConnectionString connectionString = new ConnectionString(url);
+        final MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
+                .applyConnectionString(connectionString)
+                .build();
+        MongoClient mongoClient = MongoClients.create(mongoClientSettings);
+        //DB factory created with given database
+        SimpleMongoClientDatabaseFactory mongoDbFactory = new SimpleMongoClientDatabaseFactory(mongoClient,database);
+        //To get acknowledgements after writes. This will give acknowledgement as soon as it is written into the primary DB
+        mongoDbFactory.setWriteConcern(WriteConcern.W1);
+
+        return new MongoTemplate(mongoDbFactory);
+    }
+
+    public MongoTemplate getMongoTemplateFromMap(String database){
+        return mongoTemplates.get(database);
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -35,31 +36,34 @@ public abstract class AbstractDAO<T> {
      */
 
 
-    protected final MongoOperations getMongoOperations() {
-        return mongoConfig.getMongoTemplate("Product");
+    protected final MongoOperations getMongoOperations(String database) {
+        return determineMongoTemplate(database);
     }
 
+    private MongoTemplate determineMongoTemplate(final String database) {
+       return mongoConfig.getMongoTemplateFromMap(database);
+    }
 
-    public T findById(Class<T> clazz, Object id)  {
-        final MongoOperations mongoOperations = getMongoOperations();
+    public T findById(final String database,Class<T> clazz, Object id)  {
+        final MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.findById(id, clazz);
     }
 
-    public List<T> findAll(Class<T> clazz) {
-        final MongoOperations mongoOperations = getMongoOperations();
+    public List<T> findAll(final String database,Class<T> clazz) {
+        final MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.findAll(clazz);
     }
 
-    public T findOneByProperty(Class<T> clazz, String key, String value)  {
+    public T findOneByProperty(final String database,Class<T> clazz, String key, String value)  {
         final Query query = new Query();
         query.addCriteria(where(key).is(value));
-        final MongoOperations mongoOperations = getMongoOperations();
+        final MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.findOne(query, clazz);
     }
 
-    public List<T> findListByProperties(Class<T> clazz, Map<String, Object> properties)  {
+    public List<T> findListByProperties(final String database,Class<T> clazz, Map<String, Object> properties)  {
         List<T> list;
-        MongoOperations mongoOperations = getMongoOperations();
+        MongoOperations mongoOperations = getMongoOperations(database);
 
         Query query = new Query();
         if (!CollectionUtils.isEmpty(properties)) {
@@ -75,16 +79,16 @@ public abstract class AbstractDAO<T> {
         return list;
     }
 
-    public T findOneByProperties(Class<T> clazz, Map<String, Object> properties)  {
-        List<T> byProperties = findListByProperties(clazz, properties);
+    public T findOneByProperties(final String database,Class<T> clazz, Map<String, Object> properties)  {
+        List<T> byProperties = findListByProperties(database,clazz, properties);
         if (!CollectionUtils.isEmpty(byProperties)) {
             return byProperties.get(0);
         }
         return null;
     }
 
-    public T findOneByPropertyWithProjection(Class<T> clazz, String key, Object value, List<String> projection) {
-        MongoOperations mongoOperations = getMongoOperations();
+    public T findOneByPropertyWithProjection(final String database,Class<T> clazz, String key, Object value, List<String> projection) {
+        MongoOperations mongoOperations = getMongoOperations(database);
         Query query = new Query();
         if (!CollectionUtils.isEmpty(projection)) {
             for (String projectionField : projection) {
@@ -95,57 +99,57 @@ public abstract class AbstractDAO<T> {
         return mongoOperations.findOne(query, clazz);
     }
 
-    public List<T> findByPropertyWithProjection(Class<T> clazz, String key, Object value, List<String> projections) {
+    public List<T> findByPropertyWithProjection(final String database,Class<T> clazz, String key, Object value, List<String> projections) {
         Query query = new Query();
         if (!CollectionUtils.isEmpty(projections))
             projections.forEach(project -> query.fields().include(project));
         query.addCriteria(where(key).is(value));
-        return find(query, clazz);
+        return find(database,query, clazz);
     }
 
-    public List<T> find(Query query, Class<T> clazz)  {
-        final MongoOperations mongoOperations = getMongoOperations();
+    public List<T> find(final String database,Query query, Class<T> clazz)  {
+        final MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.find(query, clazz);
     }
 
-    public T findOne(Query query, Class<T> clazz)  {
-        final MongoOperations mongoOperations = getMongoOperations();
+    public T findOne(final String database,Query query, Class<T> clazz)  {
+        final MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.findOne(query, clazz);
     }
 
-    public List<T> findByProperty(String key, Object value, Class<T> clazz)  {
+    public List<T> findByProperty(final String database,String key, Object value, Class<T> clazz)  {
         final Query query = new Query().addCriteria(Criteria.where(key).is(value));
         log.info("[findByProperty] Query {}", query);
-        return find(query, clazz);
+        return find(database,query, clazz);
     }
 
-    public long count(Query query, Class<T> clazz)  {
-        MongoOperations mongoOperations = getMongoOperations();
+    public long count(final String database,Query query, Class<T> clazz)  {
+        MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.count(query, clazz);
     }
 
-    public void persist(T t)  {
-        MongoOperations mongoOperations = getMongoOperations();
+    public void persist(T t,final String database)  {
+        MongoOperations mongoOperations = getMongoOperations(database);
         mongoOperations.save(t);
     }
 
-    public T persistAndGetUpdated(T t) {
-        MongoOperations mongoOperations = getMongoOperations();
+    public T persistAndGetUpdated(final String database,T t) {
+        MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.save(t);
     }
 
-    public void persistAll(List<T> objects, Class<T> clazz) {
-        BulkOperations bulkOperations = getMongoOperations().bulkOps(UNORDERED, clazz);
+    public void persistAll(final String database,List<T> objects, Class<T> clazz) {
+        BulkOperations bulkOperations = getMongoOperations(database).bulkOps(UNORDERED, clazz);
         bulkOperations.insert(objects);
         bulkOperations.execute();
     }
 
-    public void save(Object object)  {
-        MongoOperations mongoOperations = getMongoOperations();
+    public void save(final String database,Object object)  {
+        MongoOperations mongoOperations = getMongoOperations(database);
         mongoOperations.save(object);
     }
 
-    public T updateProperties(Class<T> clazz, String key, Object value, Map<String, Object> propertiesMap)  {
+    public T updateProperties(final String database,Class<T> clazz, String key, Object value, Map<String, Object> propertiesMap)  {
 
         Query query = new Query();
         if (!CollectionUtils.isEmpty(propertiesMap)) {
@@ -160,7 +164,7 @@ public abstract class AbstractDAO<T> {
 
             FindAndModifyOptions findAndModifyOptions = new FindAndModifyOptions();
             findAndModifyOptions.returnNew(true);
-            return findAndModify(query, multipleUpdates, findAndModifyOptions, clazz);
+            return findAndModify(database,query, multipleUpdates, findAndModifyOptions, clazz);
         }
         return null;
     }
@@ -176,16 +180,16 @@ public abstract class AbstractDAO<T> {
 
 
 
-    public T findAndModify(Query query, Update update, FindAndModifyOptions options, Class<T> clazz)  {
-        MongoOperations mongoOperations = getMongoOperations();
+    public T findAndModify(final String database,Query query, Update update, FindAndModifyOptions options, Class<T> clazz)  {
+        MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.findAndModify(query, update, options, clazz);
     }
 
 
 
-    public T findAndRemove(Query query,  Class<T> clazz) {
+    public T findAndRemove(final String database,Query query,  Class<T> clazz) {
         try {
-            MongoOperations mongoOperations = getMongoOperations();
+            MongoOperations mongoOperations = getMongoOperations(database);
             return mongoOperations.findAndRemove(query, clazz);
         }
         catch (Exception e){
@@ -194,17 +198,17 @@ public abstract class AbstractDAO<T> {
         return null;
     }
 
-    public T updateProperty(Class<T> clazz, String key, Object value, String updateKey, Object updateValue)  {
+    public T updateProperty(final String database,Class<T> clazz, String key, Object value, String updateKey, Object updateValue)  {
         Query query = new Query();
         query.addCriteria(new Criteria(key).is(value));
         Update update = new Update();
         update.set(updateKey, updateValue);
         FindAndModifyOptions findAndModifyOptions = new FindAndModifyOptions();
         findAndModifyOptions.returnNew(true);
-        return findAndModify(query, update, findAndModifyOptions, clazz);
+        return findAndModify(database,query, update, findAndModifyOptions, clazz);
     }
 
-    public T updatePropertiesOnConditions(Class<T> clazz, Map<String, Object> conditionsMap, Map<String, Object> propertiesMap)  {
+    public T updatePropertiesOnConditions(final String database,Class<T> clazz, Map<String, Object> conditionsMap, Map<String, Object> propertiesMap)  {
         Query query = new Query();
         if (!CollectionUtils.isEmpty(conditionsMap) && !CollectionUtils.isEmpty(propertiesMap)) {
             Iterator conditionIterator = conditionsMap.entrySet().iterator();
@@ -222,14 +226,14 @@ public abstract class AbstractDAO<T> {
 
             FindAndModifyOptions findAndModifyOptions = new FindAndModifyOptions();
             findAndModifyOptions.returnNew(true);
-            return findAndModify(query, multipleUpdates, findAndModifyOptions, clazz);
+            return findAndModify(database,query, multipleUpdates, findAndModifyOptions, clazz);
         }
         return null;
     }
 
-    public T updateMulti(Class<T> clazz, Query query, Update update) throws Exception{
+    public T updateMulti(final String database,Class<T> clazz, Query query, Update update) throws Exception{
         try{
-            MongoOperations mongoOperations = getMongoOperations();
+            MongoOperations mongoOperations = getMongoOperations(database);
             mongoOperations.updateMulti(query, update, clazz);
         }catch (Exception e){
             throw new Exception(e);
@@ -237,8 +241,8 @@ public abstract class AbstractDAO<T> {
         return null;
     }
 
-    public DeleteResult remove(Query query, Class<T> clazz) {
-        MongoOperations mongoOperations = getMongoOperations();
+    public DeleteResult remove(final String database,Query query, Class<T> clazz) {
+        MongoOperations mongoOperations = getMongoOperations(database);
         return mongoOperations.remove(query, clazz);
     }
 }

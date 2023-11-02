@@ -3,11 +3,12 @@ package com.example.mongo.controller;
 import com.example.mongo.config.MongoConfig;
 import com.example.mongo.model.Product;
 import com.example.mongo.repository.ProductRepository;
+import com.example.mongo.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +20,7 @@ public class ProductController {
     private ProductRepository productRepository;
 
     @Autowired
-    private MongoConfig mongoConfig;
+    private ProductService productService;
 
     @GetMapping("/healthCheck")
     public String checkHealth(){
@@ -28,7 +29,7 @@ public class ProductController {
 
     @GetMapping("/product")
     public List<Product> getAllProducts(){
-        return mongoConfig.getMongoTemplate("Product").findAll(Product.class);
+        return productService.findAllProducts();
     }
 
     @PostMapping("/product")
@@ -39,6 +40,8 @@ public class ProductController {
 
     @GetMapping("/product/{productName}")
     public Product finaByProductName(@PathVariable String productName){
+        Pageable pageable = PageRequest.of(1,1,Sort.by("name").ascending());
+        productRepository.findAll(pageable);
         return productRepository.findByProductName(productName);
     }
 
